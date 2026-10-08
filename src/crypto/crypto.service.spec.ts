@@ -1,3 +1,6 @@
+import { constants, publicDecrypt } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ErrorCode } from '../common/error-codes.js';
 import { CryptoService } from './crypto.service.js';
@@ -65,6 +68,20 @@ describe('CryptoService', () => {
     );
 
     expect(decrypted.data?.payload).toBe(payload);
+  });
+
+  it('creates a random AES key string and encrypts it with the private key as data1', () => {
+    const encrypted = service.encrypt('payload');
+    const publicKey = readFileSync(join(process.cwd(), 'keys', 'public.pem'), 'utf8');
+    const aesKey = publicDecrypt(
+      {
+        key: publicKey,
+        padding: constants.RSA_PKCS1_PADDING,
+      },
+      Buffer.from(encrypted.data!.data1, 'base64'),
+    ).toString('utf8');
+
+    expect(aesKey).toMatch(/^[0-9a-f]{32}$/);
   });
 
   it('produces different ciphertext for the same payload (random AES key/IV)', () => {

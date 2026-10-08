@@ -17,13 +17,13 @@ export class GetEncryptDataDto {
 
 export class EncryptResultDto {
   @ApiProperty({
-    description: 'RSA-OAEP encrypted AES-256 key (base64)',
+    description: 'AES key string encrypted with the RSA private key (base64)',
     example: 'kQ1a...==',
   })
   data1: string;
 
   @ApiProperty({
-    description: 'AES-256-GCM ciphertext with IV and auth tag (base64)',
+    description: 'Payload encrypted with the random AES key (base64, IV + ciphertext)',
     example: 'nR8b...==',
   })
   data2: string;

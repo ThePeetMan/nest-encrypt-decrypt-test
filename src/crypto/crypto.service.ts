@@ -3,8 +3,8 @@ import {
   constants,
   createCipheriv,
   createDecipheriv,
-  privateDecrypt,
-  publicEncrypt,
+  privateEncrypt,
+  publicDecrypt,
   randomBytes,
 } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -14,11 +14,13 @@ import { ErrorCode } from '../common/error-codes.js';
 import type { DecryptResultDto } from './dto/decrypt-data.dto.js';
 import type { EncryptResultDto } from './dto/encrypt-data.dto.js';
 
-const AES_ALGORITHM = 'aes-256-gcm';
-const AES_KEY_BYTES = 32;
-const AES_IV_BYTES = 12;
-const AES_TAG_BYTES = 16;
-const RSA_OAEP_HASH = 'sha256';
+const AES_ALGORITHM = 'aes-256-cbc';
+const AES_KEY_CHARS = 32;
+const AES_IV_BYTES = 16;
+
+function randomAesKeyString(): string {
+  return randomBytes(AES_KEY_CHARS / 2).toString('hex');
+}
 
 @Injectable()
 export class CryptoService {
@@ -34,23 +36,25 @@ export class CryptoService {
 
   encrypt(payload: string): ApiResponseDto<EncryptResultDto | null> {
     try {
-      const aesKey = randomBytes(AES_KEY_BYTES);
+      const aesKey = randomAesKeyString();
       const iv = randomBytes(AES_IV_BYTES);
-      const cipher = createCipheriv(AES_ALGORITHM, aesKey, iv);
+      const cipher = createCipheriv(
+        AES_ALGORITHM,
+        Buffer.from(aesKey, 'utf8'),
+        iv,
+      );
       const ciphertext = Buffer.concat([
         cipher.update(payload, 'utf8'),
         cipher.final(),
       ]);
-      const tag = cipher.getAuthTag();
 
-      const data2 = Buffer.concat([iv, tag, ciphertext]).toString('base64');
-      const data1 = publicEncrypt(
+      const data2 = Buffer.concat([iv, ciphertext]).toString('base64');
+      const data1 = privateEncrypt(
         {
-          key: this.publicKey,
-          padding: constants.RSA_PKCS1_OAEP_PADDING,
-          oaepHash: RSA_OAEP_HASH,
+          key: this.privateKey,
+          padding: constants.RSA_PKCS1_PADDING,
         },
-        aesKey,
+        Buffer.from(aesKey, 'utf8'),
       ).toString('base64');
 
       return ok({ data1, data2 });
@@ -65,26 +69,26 @@ export class CryptoService {
     data2: string,
   ): ApiResponseDto<DecryptResultDto | null> {
     try {
-      const aesKey = privateDecrypt(
+      const aesKey = publicDecrypt(
         {
-          key: this.privateKey,
-          padding: constants.RSA_PKCS1_OAEP_PADDING,
-          oaepHash: RSA_OAEP_HASH,
+          key: this.publicKey,
+          padding: constants.RSA_PKCS1_PADDING,
         },
         Buffer.from(data1, 'base64'),
-      );
+      ).toString('utf8');
 
       const packed = Buffer.from(data2, 'base64');
-      if (packed.length < AES_IV_BYTES + AES_TAG_BYTES) {
+      if (packed.length <= AES_IV_BYTES) {
         return fail(ErrorCode.DECRYPT_FAILED);
       }
 
       const iv = packed.subarray(0, AES_IV_BYTES);
-      const tag = packed.subarray(AES_IV_BYTES, AES_IV_BYTES + AES_TAG_BYTES);
-      const ciphertext = packed.subarray(AES_IV_BYTES + AES_TAG_BYTES);
-
-      const decipher = createDecipheriv(AES_ALGORITHM, aesKey, iv);
-      decipher.setAuthTag(tag);
+      const ciphertext = packed.subarray(AES_IV_BYTES);
+      const decipher = createDecipheriv(
+        AES_ALGORITHM,
+        Buffer.from(aesKey, 'utf8'),
+        iv,
+      );
       const payload = Buffer.concat([
         decipher.update(ciphertext),
         decipher.final(),

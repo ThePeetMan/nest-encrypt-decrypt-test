@@ -82,11 +82,11 @@ Validation errors return HTTP 400 with `error_code: "INVALID_PAYLOAD"`. Crypto f
 
 RSA-2048 cannot encrypt a 2000-character payload directly, so the service uses hybrid encryption:
 
-1. Generate a random **AES-256** key and 12-byte IV.
-2. Encrypt the payload with **AES-256-GCM** → `data2` = base64(`iv || authTag || ciphertext`).
-3. Wrap the AES key with **RSA-OAEP (SHA-256)** using `keys/public.pem` → `data1` (base64).
+1. Create an AES key as a **random 32-character hex string**.
+2. Encrypt the payload with that AES key (**AES-256-CBC**) → `data2` = base64(`iv || ciphertext`).
+3. Encrypt the AES key string with the **RSA private key** (`privateEncrypt`) → `data1` (base64).
 
-Decrypt reverses the steps with `keys/private.pem`.
+Decrypt reverses the steps: recover the AES key from `data1` with the **public key**, then decrypt `data2`.
 
 คีย์ตัวอย่างอยู่ใน `keys/public.pem` และ `keys/private.pem` (สำหรับเดโมเท่านั้น)
 

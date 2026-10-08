@@ -4,7 +4,7 @@ import { ApiResponseDto } from '../../common/api-response.js';
 
 export class GetDecryptDataDto {
   @ApiProperty({
-    description: 'RSA-OAEP encrypted AES-256 key (base64) from /get-encrypt-data',
+    description: 'AES key string encrypted with the RSA private key (base64)',
     example: 'kQ1a...==',
   })
   @IsDefined()
@@ -13,7 +13,7 @@ export class GetDecryptDataDto {
   data1: string;
 
   @ApiProperty({
-    description: 'AES-256-GCM ciphertext with IV and auth tag (base64)',
+    description: 'Payload encrypted with the AES key (base64, IV + ciphertext)',
     example: 'nR8b...==',
   })
   @IsDefined()

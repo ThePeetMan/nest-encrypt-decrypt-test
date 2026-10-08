@@ -20,7 +20,7 @@ export class CryptoController {
   @ApiOperation({
     summary: 'Encrypt a payload',
     description:
-      'Encrypts the payload with AES-256-GCM and wraps the AES key with RSA-OAEP (SHA-256) using the service public key.',
+      'Creates a random AES key string, encrypts the payload with that key (data2), then encrypts the AES key with the RSA private key (data1).',
   })
   @ApiOkResponse({ type: EncryptResponseDto })
   encrypt(@Body() dto: GetEncryptDataDto): EncryptResponseDto {
@@ -32,7 +32,7 @@ export class CryptoController {
   @ApiOperation({
     summary: 'Decrypt data1 and data2',
     description:
-      'Unwraps the AES key from data1 with the RSA private key, then decrypts data2 back to the original payload.',
+      'Decrypts data1 with the RSA public key to recover the AES key string, then decrypts data2 back to the original payload.',
   })
   @ApiOkResponse({ type: DecryptResponseDto })
   decrypt(@Body() dto: GetDecryptDataDto): DecryptResponseDto {
